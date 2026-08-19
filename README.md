@@ -22,6 +22,12 @@ The generated package contains:
 
 The generated catalog must be signed with a certificate trusted by the target Windows installation before normal driver-store installation.
 
+## Releases
+
+Releases require a semver tag such as `v1.0.0` pointing to a commit in `main`'s history. Pushing such a tag runs validation and publishes a source-only GitHub Release; the workflow rejects tags outside `main` before packaging. Its ZIP contains only this project's `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, `build.ps1`, and `driver\lg-38wn95c-arm64.inf`, plus a SHA-256 sidecar.
+
+The release is not a signed or directly installable driver package. It contains no LG ZIP, ICM profile, installer, catalog, executable, or trusted signature. Obtain LG's official archive separately, build locally with the WDK, and sign the generated catalog with a certificate trusted by the target Windows installation.
+
 ## Hardware IDs and modes
 
 | Hardware ID | Connection | Range | Preferred mode |

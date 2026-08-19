@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -60,8 +62,84 @@ jobs:
 
           $trackedFiles = git ls-files
           $forbiddenTrackedFiles = @($trackedFiles | Where-Object {
-            $_ -match '(^|/)(out/|.*\.(cat|exe|icm|zip)$|LG HDR WQHD+\.inf$)'
+            $_ -match '(^|/)(out/|.*\.(cat|exe|icm|zip)$|LG HDR WQHD\+\.inf$)'
           })
           if ($forbiddenTrackedFiles.Count -ne 0) {
             throw "LG-owned or generated files must not be tracked: $($forbiddenTrackedFiles -join ', ')"
           }
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: validate
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      PACKAGE_NAME: lg-38wn95c-arm64-source-${{ github.ref_name }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release tag
+        shell: pwsh
+        run: |
+          if ($env:RELEASE_TAG -notmatch '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$') {
+            throw "Release tags must use vMAJOR.MINOR.PATCH without leading zeroes: $env:RELEASE_TAG"
+          }
+
+      - name: Check tag is on main
+        shell: pwsh
+        run: |
+          git show-ref --verify --quiet refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) {
+            git fetch origin main --no-tags
+            if ($LASTEXITCODE -ne 0) {
+              throw 'Unable to fetch origin/main'
+            }
+          }
+
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release tag $env:RELEASE_TAG does not point to a commit on main"
+          }
+
+      - name: Create source package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP $env:PACKAGE_NAME
+          New-Item -ItemType Directory -Path (Join-Path $stage 'driver') -Force | Out-Null
+
+          Copy-Item -LiteralPath @(
+            'README.md'
+            'LICENSE'
+            'THIRD_PARTY_NOTICES.md'
+            'build.ps1'
+          ) -Destination $stage
+          Copy-Item -LiteralPath 'driver\lg-38wn95c-arm64.inf' -Destination (Join-Path $stage 'driver')
+
+          $archive = Join-Path $PWD "$env:PACKAGE_NAME.zip"
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $archive
+
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
+          "$hash  $env:PACKAGE_NAME.zip" |
+            Set-Content -LiteralPath "$archive.sha256" -Encoding ascii -NoNewline
+
+      - name: Publish GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @'
+          This is a source-only release for an unofficial, INF-only ARM64 monitor package. It is not a signed or directly installable driver package. It contains no LG ZIP, ICM profile, installer, catalog, executable, or trusted signature. Obtain LG's official archive separately, build locally with the WDK, and sign the generated catalog with a certificate trusted by the target Windows installation.
+          '@
+
+          gh release create $env:RELEASE_TAG `
+            "$env:PACKAGE_NAME.zip" `
+            "$env:PACKAGE_NAME.zip.sha256" `
+            --verify-tag `
+            --title "LG 38WN95C ARM64 source $env:RELEASE_TAG" `
+            --generate-notes `
+            --notes $notes
