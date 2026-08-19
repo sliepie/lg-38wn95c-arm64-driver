@@ -1,0 +1,64 @@
+; Unofficial ARM64 monitor metadata package for the LG 38WN95C.
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=Monitor
+ClassGuid={4D36E96E-E325-11CE-BFC1-08002BE10318}
+Provider=%ProviderName%
+CatalogFile=lg-38wn95c-arm64.cat
+DriverVer=08/19/2026,1.0.0.0
+PnpLockdown=1
+
+[DestinationDirs]
+Profile.CopyFiles=23
+
+[SourceDisksNames.arm64]
+1=%DiskName%,,,
+
+[SourceDisksFiles.arm64]
+LG HDR WQHD+.icm=1
+
+[Manufacturer]
+%ProviderName%=LGModels,NTarm64
+
+[LGModels.NTarm64]
+%HdmiName%=Install.HDMI,MONITOR\GSM774C
+%DisplayPortName%=Install.HighRefresh,MONITOR\GSM774D
+%ThunderboltName%=Install.HighRefresh,MONITOR\GSM774E
+
+[Install.HDMI]
+AddReg=Monitor.Common.AddReg,Monitor.HDMI.AddReg
+CopyFiles=Profile.CopyFiles
+
+[Install.HDMI.Services]
+AddService=,2
+
+[Install.HighRefresh]
+AddReg=Monitor.Common.AddReg,Monitor.HighRefresh.AddReg
+CopyFiles=Profile.CopyFiles
+
+[Install.HighRefresh.Services]
+AddService=,2
+
+[Monitor.Common.AddReg]
+HKR,,MaxResolution,,"3840,1600"
+HKR,,DPMS,,1
+HKR,,ICMProfile,0,"LG HDR WQHD+.icm"
+
+[Monitor.HDMI.AddReg]
+HKR,"MODES\3840,1600",Mode1,,"30.0-125.0,48.0-75.0,+,+"
+HKR,,PreferredMode,,"3840,1600,75"
+
+[Monitor.HighRefresh.AddReg]
+HKR,"MODES\3840,1600",Mode1,,"30.0-250.0,48.0-144.0,+,+"
+HKR,,PreferredMode,,"3840,1600,120"
+
+[Profile.CopyFiles]
+LG HDR WQHD+.icm
+
+[Strings]
+ProviderName="38WN95C ARM64 Monitor Project"
+DiskName="38WN95C ARM64 Monitor Package"
+HdmiName="38WN95C (HDMI)"
+DisplayPortName="38WN95C (DisplayPort)"
+ThunderboltName="38WN95C (Thunderbolt)"
